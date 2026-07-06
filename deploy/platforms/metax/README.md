@@ -130,5 +130,12 @@ npm run dev
 **节点内感知失败**  
 mx 节点需安装 topo-profiler（MetaX 二进制或 Python 版），SSH 免密与 `14735` 端口需通。
 
-**切换回 tj 平台联调**  
-express 改用 `deploy/platforms/tj/env.express`，前端隧道改为 `ssh -L 3000:127.0.0.1:3000 tj-24`。
+**切换回 tj-24 联调**
+
+与本节相同模式，隧道改为：
+
+```powershell
+ssh -L 4000:177.177.190.145:4000 tj-24
+```
+
+express 使用 [deploy/platforms/tj/env.express.local](../../platforms/tj/env.express.local)（`NEO4J_ENABLED=false`）。详见 [deploy/tj/README.md](../../tj/README.md)。

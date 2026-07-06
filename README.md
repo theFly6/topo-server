@@ -41,10 +41,14 @@ powershell -ExecutionPolicy Bypass -File deploy/sync-tj24.ps1
 
 ### 本地联调速查
 
-| 平台 | 本机需要 | 隧道 / 配置 |
-|------|----------|-------------|
-| **mx17** | express + vue3 | `ssh -L 4000:192.168.162.17:4000 -p 14735 …` → express `SERVER_URL_BASE=127.0.0.1:4000` |
-| **tj-24** | 仅 vue3 | `ssh -L 3000:127.0.0.1:3000 tj-24` → `VITE_API_BASE=http://localhost:3000` |
+两平台均为 **express 在本机**，仅 topo-server 在远端：
+
+| 平台 | 远端 topo-server | 本机隧道 | express `.env` |
+|------|------------------|----------|----------------|
+| **mx17** | `./run.sh start` | `ssh -L 4000:192.168.162.17:4000 -p 14735 …` | `127.0.0.1:4000`，Neo4j 开 |
+| **tj-24** | `deploy/tj/start.sh` | `ssh -L 4000:177.177.190.145:4000 tj-24` | `127.0.0.1:4000`，Neo4j 关 |
+
+前端：`VITE_API_BASE=http://localhost:3000`
 
 ## 主要 API
 
