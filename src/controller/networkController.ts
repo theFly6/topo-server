@@ -149,55 +149,133 @@ export async function getLatency(req: express.Request, res: express.Response) {
 }
 
 
-// ==================== 全局缓存：确保每个节点只启动一次 iperf server ====================
+// ==================== iperf3 带宽测量 ====================
+const IPERF_SSH_PORT = 14735;
 const iperfServerCache = new Set<string>();
 
-/**
- * 自动启动目标节点的 iperf3 server（只启动一次）
- */
-async function ensureIperfServer(targetIp: string, port = 14735) {
-    if (iperfServerCache.has(targetIp)) {
-        return; // 已经启动过，直接返回
-    }
-
-    try {
-        const cmd = `ssh -n -T -q -p ${port} ${targetIp} "docker rm -f iperf3 2>/dev/null; docker run -d --name iperf3 --net=host --restart=always quay.io/networkstatic/iperf3 -s 2>/dev/null"`;
-        await runCommand(cmd);
-        iperfServerCache.add(targetIp); // 标记已启动
-        console.log(`✅ 节点 ${targetIp} 已启动 iperf3 server`);
-    } catch (err) {
-        console.log(`❌ 启动 ${targetIp} iperf3 失败:`, err);
-    }
+function sleep(ms: number) {
+    return new Promise((r) => setTimeout(r, ms));
 }
 
-// ==================== 测量单个目标带宽 ====================
-async function measureSingleBandwidth(source: string, dest: string) {
-    try {
-        // ✅ 自动确保 dest 启动了 server（只一次）
-        await ensureIperfServer(dest);
+function sshCmd(host: string, remote: string, port = IPERF_SSH_PORT) {
+    const escaped = remote.replace(/"/g, '\\"');
+    return `ssh -n -T -q -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p ${port} ${host} "${escaped}"`;
+}
 
-        // 等待 server 就绪
-        await new Promise(r => setTimeout(r, 300));
+/** iperf3 客户端 JSON：上行用 sum_sent，部分环境只有 sum_received */
+function extractBandwidthBps(parsed: any): number | null {
+    const end = parsed?.end;
+    if (!end) return null;
+    const sent = end.sum_sent?.bits_per_second;
+    const recv = end.sum_received?.bits_per_second;
+    const bps = sent || recv;
+    return typeof bps === 'number' && bps > 0 ? bps : null;
+}
 
-        const cmd = `ssh -n -T -q -p 14735 ${source} "docker run --rm --net=host quay.io/networkstatic/iperf3 -c ${dest} -t 1 -J 2>/dev/null || true"`;
-        const result = await runCommand(cmd);
-        const parsed = JSON.parse(result);
-
-        if (!parsed.end?.sum_received) {
-            throw new Error("无法获取带宽，iperf3 server 可能未启动");
+async function waitIperfServerReady(serverIp: string, port = IPERF_SSH_PORT, timeoutMs = 8000) {
+    const deadline = Date.now() + timeoutMs;
+    while (Date.now() < deadline) {
+        try {
+            const probe = sshCmd(
+                serverIp,
+                'docker ps --filter name=iperf3 --filter status=running -q | grep -q . && (ss -lnt 2>/dev/null | grep -q ":5201" || netstat -lnt 2>/dev/null | grep -q ":5201")',
+                port,
+            );
+            await runCommand(probe);
+            return;
+        } catch {
+            await sleep(400);
         }
-
-        const bps = parsed.end.sum_received.bits_per_second;
-
-        return {
-            dest,
-            bandwidth_mbps: (bps / 1e6).toFixed(2),
-            success: true,
-            timestamp: new Date().toLocaleString()
-        };
-    } catch (err: any) {
-        return { dest, success: false, error: err.message };
     }
+    throw new Error(`节点 ${serverIp} 上 iperf3 服务未在 ${timeoutMs}ms 内就绪`);
+}
+
+/** 在 serverIp 上启动 iperf3 server；force 时忽略缓存并重建容器 */
+async function ensureIperfServer(serverIp: string, force = false, port = IPERF_SSH_PORT) {
+    if (!force && iperfServerCache.has(serverIp)) {
+        return;
+    }
+
+    const startCmd = sshCmd(
+        serverIp,
+        'docker rm -f iperf3 2>/dev/null; docker run -d --name iperf3 --net=host quay.io/networkstatic/iperf3 -s',
+        port,
+    );
+    await runCommand(startCmd);
+    await waitIperfServerReady(serverIp, port);
+    iperfServerCache.add(serverIp);
+    console.log(`✅ 节点 ${serverIp} iperf3 server 已就绪`);
+}
+
+/**
+ * 运行一次 iperf3 测速
+ * @param clientHost 运行 iperf 客户端的节点
+ * @param serverHost iperf server 所在节点
+ * @param reverse 是否 -R（server 发流 → 测 serverHost→clientHost 方向吞吐量）
+ */
+async function runIperfOnce(clientHost: string, serverHost: string, reverse: boolean) {
+    const revFlag = reverse ? '-R' : '';
+    const clientCmd = sshCmd(
+        clientHost,
+        `docker run --rm --net=host quay.io/networkstatic/iperf3 -c ${serverHost} -t 2 -P 1 ${revFlag} -J`,
+    );
+    const raw = await runCommand(clientCmd);
+    if (!raw) {
+        throw new Error('iperf3 无输出');
+    }
+    const parsed = JSON.parse(raw);
+    const bps = extractBandwidthBps(parsed);
+    if (!bps) {
+        throw new Error('iperf3 结果无效（无 sum_sent/sum_received）');
+    }
+    return bps;
+}
+
+/**
+ * 测量 source → dest 方向带宽
+ * 1. 常规：server@dest + client@source
+ * 2. 失败则反向：server@source + client@dest -R（适配部分节点入站 5201 受限）
+ */
+async function measureSingleBandwidth(source: string, dest: string) {
+    const attempts: Array<{ mode: string; run: () => Promise<number> }> = [
+        {
+            mode: 'server@dest,client@source',
+            run: async () => {
+                await ensureIperfServer(dest);
+                return runIperfOnce(source, dest, false);
+            },
+        },
+        {
+            mode: 'server@source,client@dest,-R',
+            run: async () => {
+                iperfServerCache.delete(source);
+                await ensureIperfServer(source, true);
+                return runIperfOnce(dest, source, true);
+            },
+        },
+    ];
+
+    let lastError = '未知错误';
+    for (const attempt of attempts) {
+        try {
+            console.log(`带宽 ${source} → ${dest} 尝试 [${attempt.mode}]`);
+            const bps = await attempt.run();
+            return {
+                dest,
+                bandwidth_mbps: (bps / 1e6).toFixed(2),
+                success: true,
+                mode: attempt.mode,
+                timestamp: new Date().toLocaleString(),
+            };
+        } catch (err: any) {
+            lastError = err.message || String(err);
+            console.log(`带宽 ${source} → ${dest} [${attempt.mode}] 失败: ${lastError}`);
+            iperfServerCache.delete(dest);
+            iperfServerCache.delete(source);
+        }
+    }
+
+    return { dest, success: false, error: lastError };
 }
 
 // ==================== 最终带宽接口（全自动版） ====================
