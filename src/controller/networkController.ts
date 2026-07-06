@@ -201,6 +201,10 @@ export async function getLatency(req: express.Request, res: express.Response) {
 
 // ==================== iperf3 带宽测量 ====================
 const IPERF_SSH_PORT = SSH_PORT;
+const IPERF_DURATION_SEC = Number(process.env.IPERF_DURATION_SEC || 1);
+const IPERF_PARALLEL = Number(process.env.IPERF_PARALLEL || 1);
+const IPERF_REPEATS = Number(process.env.IPERF_REPEATS || 5);
+const IPERF_SAMPLE_GAP_MS = Number(process.env.IPERF_SAMPLE_GAP_MS || 100);
 const iperfServerCache = new Set<string>();
 
 interface HostCaps {
@@ -303,12 +307,12 @@ async function ensureIperfServer(serverIp: string, force = false, port = IPERF_S
     } else if (caps.iperf3) {
         const startCmd = sshCmd(
             serverIp,
-            'pkill -x iperf3 2>/dev/null || true; sleep 0.3; iperf3 -s -D -1',
+            'pkill -x iperf3 2>/dev/null || true; sleep 0.3; iperf3 -s -D',
             port,
         );
         await runCommand(startCmd);
         await waitIperfPortOpen(serverIp, port);
-        console.log(`✅ 节点 ${serverIp} 原生 iperf3 server 已就绪`);
+        console.log(`✅ 节点 ${serverIp} 原生 iperf3 server 已就绪（持久化）`);
     } else {
         throw new Error(
             `节点 ${serverIp} 无 docker 且无 iperf3，请在节点上执行 deploy/tj/install-iperf3.sh`,
@@ -318,24 +322,49 @@ async function ensureIperfServer(serverIp: string, force = false, port = IPERF_S
     iperfServerCache.add(serverIp);
 }
 
+/** 停止 iperf3 server，释放 5201 端口 */
+async function stopIperfServer(serverIp: string, port = IPERF_SSH_PORT) {
+    iperfServerCache.delete(serverIp);
+    try {
+        const caps = await detectHostCaps(serverIp, port);
+        if (caps.docker) {
+            await runCommand(sshCmd(serverIp, 'docker rm -f iperf3 2>/dev/null || true', port));
+        } else if (caps.iperf3) {
+            await runCommand(sshCmd(serverIp, 'pkill -x iperf3 2>/dev/null || true', port));
+        }
+    } catch {
+        // 清理失败不阻断
+    }
+}
+
+function median(values: number[]): number {
+    const sorted = [...values].sort((a, b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+    return sorted.length % 2 === 0
+        ? (sorted[mid - 1] + sorted[mid]) / 2
+        : sorted[mid];
+}
+
 /**
  * 运行一次 iperf3 测速（自动选择 docker 或原生客户端）
  */
 async function runIperfOnce(clientHost: string, serverHost: string, reverse: boolean) {
     const caps = await detectHostCaps(clientHost);
     const revFlag = reverse ? '-R' : '';
+    const duration = IPERF_DURATION_SEC;
+    const parallel = IPERF_PARALLEL;
     let raw: string;
 
     if (caps.docker) {
         const clientCmd = sshCmd(
             clientHost,
-            `docker run --rm --net=host quay.io/networkstatic/iperf3 -c ${serverHost} -t 2 -P 1 ${revFlag} -J`,
+            `docker run --rm --net=host quay.io/networkstatic/iperf3 -c ${serverHost} -t ${duration} -P ${parallel} ${revFlag} -J`,
         );
         raw = await runCommand(clientCmd);
     } else if (caps.iperf3) {
         const clientCmd = sshCmd(
             clientHost,
-            `iperf3 -c ${serverHost} -t 2 -P 1 ${revFlag} -J`,
+            `iperf3 -c ${serverHost} -t ${duration} -P ${parallel} ${revFlag} -J`,
         );
         raw = await runCommand(clientCmd);
     } else {
@@ -353,27 +382,60 @@ async function runIperfOnce(clientHost: string, serverHost: string, reverse: boo
     return bps;
 }
 
+interface IperfMedianResult {
+    bps: number;
+    samples_mbps: number[];
+    repeat: number;
+}
+
+/** 多次采样取中位数；server 使用持久化模式以支持连续测量 */
+async function runIperfMedian(clientHost: string, serverHost: string, reverse: boolean): Promise<IperfMedianResult> {
+    await ensureIperfServer(serverHost, true);
+
+    const samples: number[] = [];
+    let lastError = '未知错误';
+    try {
+        for (let i = 0; i < IPERF_REPEATS; i++) {
+            try {
+                samples.push(await runIperfOnce(clientHost, serverHost, reverse));
+                if (i < IPERF_REPEATS - 1) {
+                    await sleep(IPERF_SAMPLE_GAP_MS);
+                }
+            } catch (err: any) {
+                lastError = err.message || String(err);
+                // server 可能异常退出，尝试重启后再测
+                await ensureIperfServer(serverHost, true);
+            }
+        }
+    } finally {
+        await stopIperfServer(serverHost);
+    }
+
+    if (samples.length === 0) {
+        throw new Error(lastError);
+    }
+
+    return {
+        bps: median(samples),
+        samples_mbps: samples.map((bps) => +(bps / 1e6).toFixed(2)),
+        repeat: samples.length,
+    };
+}
+
 /**
  * 测量 source → dest 方向带宽
  * 1. 常规：server@dest + client@source
  * 2. 失败则反向：server@source + client@dest -R（适配部分节点入站 5201 受限）
  */
 async function measureSingleBandwidth(source: string, dest: string) {
-    const attempts: Array<{ mode: string; run: () => Promise<number> }> = [
+    const attempts: Array<{ mode: string; run: () => Promise<IperfMedianResult> }> = [
         {
             mode: 'server@dest,client@source',
-            run: async () => {
-                await ensureIperfServer(dest);
-                return runIperfOnce(source, dest, false);
-            },
+            run: () => runIperfMedian(source, dest, false),
         },
         {
             mode: 'server@source,client@dest,-R',
-            run: async () => {
-                iperfServerCache.delete(source);
-                await ensureIperfServer(source, true);
-                return runIperfOnce(dest, source, true);
-            },
+            run: () => runIperfMedian(dest, source, true),
         },
     ];
 
@@ -381,13 +443,16 @@ async function measureSingleBandwidth(source: string, dest: string) {
     for (const attempt of attempts) {
         try {
             console.log(`带宽 ${source} → ${dest} 尝试 [${attempt.mode}]`);
-            const bps = await attempt.run();
+            const measured = await attempt.run();
             return {
                 dest,
-                bandwidth_mbps: (bps / 1e6).toFixed(2),
+                bandwidth_mbps: (measured.bps / 1e6).toFixed(2),
                 success: true,
                 mode: attempt.mode,
                 timestamp: new Date().toLocaleString(),
+                samples_mbps: measured.samples_mbps,
+                repeat: measured.repeat,
+                method: `iperf3 ${IPERF_DURATION_SEC}s × ${IPERF_REPEATS} 次取中位数 (P=${IPERF_PARALLEL})`,
             };
         } catch (err: any) {
             lastError = err.message || String(err);
