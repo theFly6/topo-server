@@ -3,11 +3,11 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 NODE="$ROOT/node/bin/node"
-NPM="$ROOT/node/bin/npm"
 export PATH="$ROOT/node/bin:$PATH"
 
 TOPO_DIR="$ROOT/topo-server"
 EXP_DIR="$ROOT/express"
+TSNODE="$TOPO_DIR/node_modules/ts-node/dist/bin.js"
 PID_DIR="$ROOT/pid"
 LOG_DIR="$ROOT/logs"
 mkdir -p "$PID_DIR" "$LOG_DIR"
@@ -18,7 +18,8 @@ if [[ ! -x "$NODE" ]]; then
 fi
 
 stop_one() {
-  local name=$1 file="$PID_DIR/$name.pid"
+  local name=$1
+  local file="$PID_DIR/$name.pid"
   if [[ -f "$file" ]]; then
     local pid
     pid=$(cat "$file")
@@ -33,7 +34,7 @@ stop_one express
 echo "[topo-server] starting..."
 cd "$TOPO_DIR"
 set -a; source "$TOPO_DIR/.env"; set +a
-nohup "$NODE" ./node_modules/ts-node/dist/bin.js ./src/server.ts \
+nohup "$NODE" "$TSNODE" ./src/server.ts \
   >> "$LOG_DIR/topo-server.log" 2>&1 &
 echo $! > "$PID_DIR/topo-server.pid"
 
@@ -41,7 +42,7 @@ sleep 2
 echo "[express] starting..."
 cd "$EXP_DIR"
 set -a; source "$EXP_DIR/.env"; set +a
-nohup "$NODE" ./node_modules/ts-node/dist/bin.js ./src/server.ts \
+nohup "$NODE" "$TSNODE" ./src/server.ts \
   >> "$LOG_DIR/express.log" 2>&1 &
 echo $! > "$PID_DIR/express.pid"
 

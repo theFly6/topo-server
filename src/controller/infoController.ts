@@ -73,10 +73,13 @@ export const handleIp2TopologyDetailData = async (req: any, res: any) => {
     const remoteDir = "~/Topo-profiler";
     const binaryName = "topo-profiler";
     const targetFileName = `res_${safeIp}.json`; 
-    const filePath = path.join(os.homedir(), 'Topo-profiler', targetFileName);
-    const localBinaryPath = path.join(os.homedir(), 'Topo-profiler', binaryName);
+    const profilerHome = process.env.TOPO_PROFILER_HOME || path.join(os.homedir(), 'Topo-profiler');
+    const filePath = path.join(profilerHome, targetFileName);
+    const localBinaryPath = path.join(profilerHome, binaryName);
+    const localMainPy = path.join(profilerHome, 'main.py');
+    const outputBaseName = `res_${safeIp}`;
+    const profilerArgs = `--format human csv json --bidirectional --repeat 5 --output ${outputBaseName}`;
 
-    // 辅助函数：纯文本格式化日志
     const logStep = (step: string, details: string) => {
         const time = new Date().toLocaleString();
         console.log(`\n[${time}] [NODE: ${ip}] >>> ${step} <<<`);
@@ -84,46 +87,70 @@ export const handleIp2TopologyDetailData = async (req: any, res: any) => {
         console.log("-".repeat(50));
     };
 
+    const resolveProfilerMode = async (): Promise<'binary' | 'python'> => {
+        if (fs.existsSync(localBinaryPath)) {
+            try {
+                await execPromise(`"${localBinaryPath}" --help >/dev/null 2>&1`);
+                return 'binary';
+            } catch {
+                console.log(`[profiler] 本地二进制不可执行，回退 Python: ${localBinaryPath}`);
+            }
+        }
+        if (fs.existsSync(localMainPy)) {
+            return 'python';
+        }
+        throw new Error(
+            `topo-profiler 未安装: ${profilerHome}，请运行 deploy/tj/install-topo-profiler.sh`,
+        );
+    };
+
+    const remoteProfilerReady = async (mode: 'binary' | 'python') => {
+        const probe = mode === 'binary'
+            ? `[ -x ${remoteDir}/${binaryName} ] && echo exists || echo missing`
+            : `[ -f ${remoteDir}/main.py ] && echo exists || echo missing`;
+        const checkCmd = `ssh -q -p ${sshPort} ${ip} "${probe}"`;
+        const { stdout: checkResult } = await execPromise(checkCmd);
+        return checkResult.trim() === 'exists';
+    };
+
     try {
-        // 0. 确保本地目录存在
+        const mode = await resolveProfilerMode();
+        console.log(`[profiler] 使用 ${mode} 模式，home=${profilerHome}`);
+
         const localDir = path.dirname(filePath);
         if (!fs.existsSync(localDir)) {
             fs.mkdirSync(localDir, { recursive: true });
         }
 
-        // 1. 检查远程二进制文件
-        const checkCmd = `ssh -q -p ${sshPort} ${ip} "[ -f ${remoteDir}/${binaryName} ] && echo 'exists' || echo 'missing'"`;
-        logStep("CHECK_REMOTE_BINARY", checkCmd);
-        const { stdout: checkResult } = await execPromise(checkCmd);
-
-        // 2. 如果不存在，上传二进制文件
-        if (checkResult.trim() !== 'exists') {
-            const setupCmd = `ssh -q -p ${sshPort} ${ip} "mkdir -p ${remoteDir}" && scp -P ${sshPort} ${localBinaryPath} ${ip}:${remoteDir}/`;
-            logStep("UPLOAD_BINARY", setupCmd);
-            await execPromise(setupCmd);
+        if (!(await remoteProfilerReady(mode))) {
+            if (mode === 'binary') {
+                const setupCmd = `ssh -q -p ${sshPort} ${ip} "mkdir -p ${remoteDir}" && scp -P ${sshPort} ${localBinaryPath} ${ip}:${remoteDir}/`;
+                logStep('UPLOAD_BINARY', setupCmd);
+                await execPromise(setupCmd);
+            } else {
+                const setupCmd = `ssh -q -p ${sshPort} ${ip} "mkdir -p ${remoteDir}" && scp -r -P ${sshPort} ${profilerHome}/* ${ip}:${remoteDir}/`;
+                logStep('UPLOAD_PYTHON_SRC', setupCmd);
+                await execPromise(setupCmd);
+            }
         }
 
-        // 3. 远程执行程序
-        const outputBaseName = `res_${safeIp}`;
-        const runCmd = `ssh -q -p ${sshPort} ${ip} "cd ${remoteDir} && ./${binaryName} --format human csv json --bidirectional --repeat 5 --output ${outputBaseName}"`;
-        logStep("EXECUTE_PROFILER", runCmd);
+        const runRemote = mode === 'binary'
+            ? `cd ${remoteDir} && ./${binaryName} ${profilerArgs}`
+            : `cd ${remoteDir} && python3 main.py ${profilerArgs}`;
+        const runCmd = `ssh -q -p ${sshPort} ${ip} "${runRemote}"`;
+        logStep('EXECUTE_PROFILER', runCmd);
         await execPromise(runCmd);
 
-        // 4. 拉取回本地
         const pullCmd = `scp -P ${sshPort} ${ip}:${remoteDir}/${targetFileName} ${filePath}`;
-        logStep("PULL_RESULT_FILE", pullCmd);
+        logStep('PULL_RESULT_FILE', pullCmd);
         await execPromise(pullCmd);
 
-        // 5. 解析并返回
         if (!fs.existsSync(filePath)) {
             throw new Error(`Local file not found at: ${filePath}`);
         }
 
         let rawData = fs.readFileSync(filePath, 'utf-8');
-        
-        // 修复 NaN/Infinity 导致的 JSON 解析错误
         rawData = rawData.replace(/\bNaN\b/gi, 'null').replace(/\bInfinity\b/gi, 'null');
-        
         const jsonData = JSON.parse(rawData);
         console.log(`[SUCCESS] Request processed for ${ip}`);
         res.json(jsonData);

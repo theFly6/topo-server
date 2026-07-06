@@ -4,10 +4,45 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import { getLocalIPv4 } from '../server';
 import { SSH_PORT } from '../config/platform';
+import { getRealNodes } from './infoController';
 
 const execPromise = promisify(exec);
 
 dotenv.config()
+
+const PSEUDO_HOSTNAMES = new Set(['Overall', 'Subnet']);
+
+function ipToInt(octets: number[]): number {
+    return ((octets[0] << 24) | (octets[1] << 16) | (octets[2] << 8) | octets[3]) >>> 0;
+}
+
+function ipInSubnet(ip: string, subnet: string): boolean {
+    const cleanIp = ip.split('/')[0];
+    const [networkPart, prefixStr = '32'] = subnet.includes('/') ? subnet.split('/') : [subnet, '32'];
+    const prefix = Number(prefixStr);
+    const mask = prefix === 0 ? 0 : (~0 << (32 - prefix)) >>> 0;
+    const ipInt = ipToInt(cleanIp.split('.').map(Number));
+    const netInt = ipToInt(networkPart.split('.').map(Number));
+    return (ipInt & mask) === (netInt & mask);
+}
+
+async function nmapAvailable(): Promise<boolean> {
+    try {
+        await execPromise('command -v nmap');
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+async function getNodesFromWorkersConf(subnet: string): Promise<string[]> {
+    const candidates = getRealNodes()
+        .filter((node) => !PSEUDO_HOSTNAMES.has(node.hostname))
+        .filter((node) => ipInSubnet(node.ip, subnet))
+        .map((node) => node.ip.split('/')[0]);
+
+    return [...new Set(candidates)];
+}
 
 
 /**
@@ -24,7 +59,7 @@ async function runCommand(command: string) {
 }
 
 // 检测是否可免密 SSH 登录
-async function canSshLogin(ip: string, port = SSH_PORT): Promise<boolean> {
+async function canSshLogin(ip: string, port: string | number = SSH_PORT): Promise<boolean> {
   try {
     const cmd = `ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o BatchMode=yes ${ip} -p ${port} exit`;
     await execPromise(cmd);
@@ -43,33 +78,48 @@ export async function getNodes(req: express.Request, res: express.Response) {
     let subnet = data.subnet as string || "192.168.162.0/24";
     let port = data.port as string || SSH_PORT;
     if (!subnet.includes("/")) subnet += "/24"; // 自动补子网掩码
-    const cmd = `nmap -p ${port} --open -oG - ${subnet} | grep "Up" | awk '{print $2}'`;
+
+    const finishWithNodes = async (allNodes: string[], source: 'nmap' | 'workers') => {
+        const localIP = getLocalIPv4();
+        const sshChecks = allNodes.map(async (ip) => {
+            if (ip === localIP) return true;
+            return canSshLogin(ip, port);
+        });
+        const results = await Promise.all(sshChecks);
+        const sshReadyNodes = allNodes.filter((_, i) => results[i]);
+        const duration = ((Date.now() - startTime) / 1000).toFixed(2);
+        console.log(`[${source}] 子网 ${subnet} 发现 ${allNodes.length} 节点，SSH 可达 ${sshReadyNodes.length}，耗时 ${duration}s`);
+        res.json({
+            success: true,
+            ssh_ready_nodes: sshReadyNodes,
+            scan_duration_seconds: duration,
+            source,
+        });
+    };
+
     try {
+        if (!(await nmapAvailable())) {
+            console.log('nmap 不可用，回退到 workers.conf 节点列表');
+            const workerNodes = await getNodesFromWorkersConf(subnet);
+            return finishWithNodes(workerNodes, 'workers');
+        }
+
+        const cmd = `nmap -p ${port} --open -oG - ${subnet} | grep "Up" | awk '{print $2}'`;
         const result = await runCommand(cmd);
         const getNodesDuration = ((Date.now() - startTime) / 1000).toFixed(2);
         console.log(`Nmap 扫描完成，耗时 ${getNodesDuration} 秒，结果:\n${result}`);
         const allNodes = result.split('\n').filter(ip => ip.length > 0);
-        const localIP = getLocalIPv4();
-
-        // ===================== 并行检测 SSH =====================
-        const sshChecks = allNodes.map(async (ip) => {
-            if (ip === localIP) return true;
-            return canSshLogin(ip);
-        });
-        const results = await Promise.all(sshChecks);
-        const sshReadyNodes = allNodes.filter((_, i) => results[i]);
-
-        // 记录结束时间并计算总耗时
-        const endTime = Date.now();
-        const duration = ((endTime - startTime) / 1000).toFixed(2);
-        // 3. 返回：保留原有 nodes + 新增 ssh_ready_nodes
-        res.json({
-        success: true,
-        ssh_ready_nodes: sshReadyNodes, // 可免密登录的有效节点 ✅
-        // nodes: allNodes,               // 端口开放的全部节点
-        scan_duration_seconds: duration // 扫描耗时
-        });
+        return finishWithNodes(allNodes, 'nmap');
     } catch (err: any) {
+        if (err.message.includes('nmap')) {
+            console.log('nmap 执行失败，回退到 workers.conf 节点列表');
+            try {
+                const workerNodes = await getNodesFromWorkersConf(subnet);
+                return finishWithNodes(workerNodes, 'workers');
+            } catch (fallbackErr: any) {
+                return res.status(500).json({ success: false, error: fallbackErr.message });
+            }
+        }
         res.status(500).json({ success: false, error: err.message });
     }
 }
@@ -153,6 +203,13 @@ export async function getLatency(req: express.Request, res: express.Response) {
 const IPERF_SSH_PORT = SSH_PORT;
 const iperfServerCache = new Set<string>();
 
+interface HostCaps {
+    docker: boolean;
+    iperf3: boolean;
+}
+
+const hostCapsCache = new Map<string, HostCaps>();
+
 function sleep(ms: number) {
     return new Promise((r) => setTimeout(r, ms));
 }
@@ -160,6 +217,29 @@ function sleep(ms: number) {
 function sshCmd(host: string, remote: string, port = IPERF_SSH_PORT) {
     const escaped = remote.replace(/"/g, '\\"');
     return `ssh -n -T -q -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p ${port} ${host} "${escaped}"`;
+}
+
+async function remoteCommandExists(host: string, cmd: string, port = IPERF_SSH_PORT): Promise<boolean> {
+    try {
+        await runCommand(sshCmd(host, `command -v ${cmd} >/dev/null`, port));
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+/** 探测节点是否有 docker / 原生 iperf3 */
+async function detectHostCaps(host: string, port = IPERF_SSH_PORT): Promise<HostCaps> {
+    const cached = hostCapsCache.get(host);
+    if (cached) return cached;
+
+    const caps: HostCaps = {
+        docker: await remoteCommandExists(host, 'docker', port),
+        iperf3: await remoteCommandExists(host, 'iperf3', port),
+    };
+    hostCapsCache.set(host, caps);
+    console.log(`[iperf] 节点 ${host} 能力: docker=${caps.docker}, iperf3=${caps.iperf3}`);
+    return caps;
 }
 
 /** iperf3 客户端 JSON：上行用 sum_sent，部分环境只有 sum_received */
@@ -172,7 +252,21 @@ function extractBandwidthBps(parsed: any): number | null {
     return typeof bps === 'number' && bps > 0 ? bps : null;
 }
 
-async function waitIperfServerReady(serverIp: string, port = IPERF_SSH_PORT, timeoutMs = 8000) {
+async function waitIperfPortOpen(serverIp: string, port = IPERF_SSH_PORT, timeoutMs = 8000) {
+    const deadline = Date.now() + timeoutMs;
+    const probe = 'ss -lnt 2>/dev/null | grep -q ":5201" || netstat -lnt 2>/dev/null | grep -q ":5201"';
+    while (Date.now() < deadline) {
+        try {
+            await runCommand(sshCmd(serverIp, probe, port));
+            return;
+        } catch {
+            await sleep(400);
+        }
+    }
+    throw new Error(`节点 ${serverIp} 上 iperf3 服务未在 ${timeoutMs}ms 内就绪`);
+}
+
+async function waitIperfServerReadyDocker(serverIp: string, port = IPERF_SSH_PORT, timeoutMs = 8000) {
     const deadline = Date.now() + timeoutMs;
     while (Date.now() < deadline) {
         try {
@@ -187,39 +281,67 @@ async function waitIperfServerReady(serverIp: string, port = IPERF_SSH_PORT, tim
             await sleep(400);
         }
     }
-    throw new Error(`节点 ${serverIp} 上 iperf3 服务未在 ${timeoutMs}ms 内就绪`);
+    throw new Error(`节点 ${serverIp} 上 docker iperf3 未在 ${timeoutMs}ms 内就绪`);
 }
 
-/** 在 serverIp 上启动 iperf3 server；force 时忽略缓存并重建容器 */
+/** 在 serverIp 上启动 iperf3 server；优先 docker，否则原生 iperf3 */
 async function ensureIperfServer(serverIp: string, force = false, port = IPERF_SSH_PORT) {
     if (!force && iperfServerCache.has(serverIp)) {
         return;
     }
 
-    const startCmd = sshCmd(
-        serverIp,
-        'docker rm -f iperf3 2>/dev/null; docker run -d --name iperf3 --net=host quay.io/networkstatic/iperf3 -s',
-        port,
-    );
-    await runCommand(startCmd);
-    await waitIperfServerReady(serverIp, port);
+    const caps = await detectHostCaps(serverIp, port);
+    if (caps.docker) {
+        const startCmd = sshCmd(
+            serverIp,
+            'docker rm -f iperf3 2>/dev/null; docker run -d --name iperf3 --net=host quay.io/networkstatic/iperf3 -s',
+            port,
+        );
+        await runCommand(startCmd);
+        await waitIperfServerReadyDocker(serverIp, port);
+        console.log(`✅ 节点 ${serverIp} docker iperf3 server 已就绪`);
+    } else if (caps.iperf3) {
+        const startCmd = sshCmd(
+            serverIp,
+            'pkill -x iperf3 2>/dev/null || true; sleep 0.3; iperf3 -s -D -1',
+            port,
+        );
+        await runCommand(startCmd);
+        await waitIperfPortOpen(serverIp, port);
+        console.log(`✅ 节点 ${serverIp} 原生 iperf3 server 已就绪`);
+    } else {
+        throw new Error(
+            `节点 ${serverIp} 无 docker 且无 iperf3，请在节点上执行 deploy/tj/install-iperf3.sh`,
+        );
+    }
+
     iperfServerCache.add(serverIp);
-    console.log(`✅ 节点 ${serverIp} iperf3 server 已就绪`);
 }
 
 /**
- * 运行一次 iperf3 测速
- * @param clientHost 运行 iperf 客户端的节点
- * @param serverHost iperf server 所在节点
- * @param reverse 是否 -R（server 发流 → 测 serverHost→clientHost 方向吞吐量）
+ * 运行一次 iperf3 测速（自动选择 docker 或原生客户端）
  */
 async function runIperfOnce(clientHost: string, serverHost: string, reverse: boolean) {
+    const caps = await detectHostCaps(clientHost);
     const revFlag = reverse ? '-R' : '';
-    const clientCmd = sshCmd(
-        clientHost,
-        `docker run --rm --net=host quay.io/networkstatic/iperf3 -c ${serverHost} -t 2 -P 1 ${revFlag} -J`,
-    );
-    const raw = await runCommand(clientCmd);
+    let raw: string;
+
+    if (caps.docker) {
+        const clientCmd = sshCmd(
+            clientHost,
+            `docker run --rm --net=host quay.io/networkstatic/iperf3 -c ${serverHost} -t 2 -P 1 ${revFlag} -J`,
+        );
+        raw = await runCommand(clientCmd);
+    } else if (caps.iperf3) {
+        const clientCmd = sshCmd(
+            clientHost,
+            `iperf3 -c ${serverHost} -t 2 -P 1 ${revFlag} -J`,
+        );
+        raw = await runCommand(clientCmd);
+    } else {
+        throw new Error(`节点 ${clientHost} 无 docker 且无 iperf3`);
+    }
+
     if (!raw) {
         throw new Error('iperf3 无输出');
     }
