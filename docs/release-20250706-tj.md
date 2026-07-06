@@ -8,7 +8,7 @@
 |------|-----|-------------|
 | [cytoscape-vue3](https://github.com/theFly6/cytoscape-vue3) | `release-20250706-tj` | `78d8aa7` |
 | [cytoscape-express](https://github.com/theFly6/cytoscape-express) | `release-20250706-tj` | `3453658` |
-| [topo-server](https://github.com/theFly6/topo-server) | `release-20250706-tj` | `c2bedfa` |
+| [topo-server](https://github.com/theFly6/topo-server) | `release-20250706-tj` | `71bd74d`（main HEAD） |
 
 ## 本版相对旧 tag 的增量
 
