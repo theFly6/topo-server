@@ -49,7 +49,7 @@ npm ci --quiet
 
 chmod +x "$ROOT/deploy/tj/"*.sh
 bash "$ROOT/deploy/tj/stop.sh" 2>/dev/null || true
-bash "$ROOT/deploy/tj/start.sh"
+bash "$ROOT/deploy/tj/start.sh" topo-server
 
-echo "[done] services:"
+echo "[done] topo-server only (本机 express 联调时无需远端 :3000)"
 ss -lntp | grep -E ':3000|:4000' || true

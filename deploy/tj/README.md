@@ -30,14 +30,16 @@ topo/
 cytoscape-vue3 (:5173)  →  express (:3000, 本机)  →  topo-server (tj-24 :4000)
 ```
 
-### 步骤 1：tj-24 上启动 topo-server
+### 步骤 1：tj-24 上仅启动 topo-server
 
 ```bash
 ssh tj-24
-bash /private/yaowenxuan/topo/deploy/tj/start.sh   # 会同时起 topo-server + express
-# 本机联调时远端 express 可忽略；也可只保证 topo-server 在跑
+bash /private/yaowenxuan/topo/deploy/tj/start.sh          # 默认仅 topo-server
+# 或显式：bash .../start.sh topo-server
 curl -s http://177.177.190.145:4000/topology/info/nodes | head
 ```
+
+> `start.sh all` 才会同时启动远端 express（整栈部署时用）。**本机 express 联调时不要跑远端 :3000。**
 
 ### 步骤 2：本机 SSH 隧道（本机 → tj-24 topo-server）
 

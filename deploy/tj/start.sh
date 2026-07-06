@@ -1,5 +1,9 @@
 #!/bin/bash
-# 启动 /private/yaowenxuan/topo 下的 topo-server + express
+# 启动 /private/yaowenxuan/topo 下的服务
+# 用法:
+#   bash start.sh              # 默认仅 topo-server（本机 express 联调）
+#   bash start.sh topo-server
+#   bash start.sh all          # topo-server + express 同机部署
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 NODE="$ROOT/node/bin/node"
@@ -10,6 +14,7 @@ EXP_DIR="$ROOT/express"
 TSNODE="$TOPO_DIR/node_modules/ts-node/dist/bin.js"
 PID_DIR="$ROOT/pid"
 LOG_DIR="$ROOT/logs"
+MODE="${1:-topo-server}"
 mkdir -p "$PID_DIR" "$LOG_DIR"
 
 if [[ ! -x "$NODE" ]]; then
@@ -28,23 +33,49 @@ stop_one() {
   fi
 }
 
-stop_one topo-server
-stop_one express
+start_topo_server() {
+  stop_one topo-server
+  echo "[topo-server] starting..."
+  cd "$TOPO_DIR"
+  set -a; source "$TOPO_DIR/.env"; set +a
+  nohup "$NODE" "$TSNODE" ./src/server.ts \
+    >> "$LOG_DIR/topo-server.log" 2>&1 &
+  echo $! > "$PID_DIR/topo-server.pid"
+  echo "[topo-server] pid=$(cat "$PID_DIR/topo-server.pid")"
+}
 
-echo "[topo-server] starting..."
-cd "$TOPO_DIR"
-set -a; source "$TOPO_DIR/.env"; set +a
-nohup "$NODE" "$TSNODE" ./src/server.ts \
-  >> "$LOG_DIR/topo-server.log" 2>&1 &
-echo $! > "$PID_DIR/topo-server.pid"
+start_express() {
+  stop_one express
+  local exp_tsnode="$EXP_DIR/node_modules/ts-node/dist/bin.js"
+  if [[ ! -f "$exp_tsnode" ]]; then
+    exp_tsnode="$TSNODE"
+  fi
+  echo "[express] starting..."
+  cd "$EXP_DIR"
+  set -a; source "$EXP_DIR/.env"; set +a
+  nohup "$NODE" "$exp_tsnode" ./src/server.ts \
+    >> "$LOG_DIR/express.log" 2>&1 &
+  echo $! > "$PID_DIR/express.pid"
+  echo "[express] pid=$(cat "$PID_DIR/express.pid")"
+}
 
-sleep 2
-echo "[express] starting..."
-cd "$EXP_DIR"
-set -a; source "$EXP_DIR/.env"; set +a
-nohup "$NODE" "$TSNODE" ./src/server.ts \
-  >> "$LOG_DIR/express.log" 2>&1 &
-echo $! > "$PID_DIR/express.pid"
+case "$MODE" in
+  topo-server|topo)
+    start_topo_server
+    ;;
+  all)
+    start_topo_server
+    sleep 2
+    start_express
+    ;;
+  express)
+    start_express
+    ;;
+  *)
+    echo "用法: $0 [topo-server|all|express]"
+    exit 1
+    ;;
+esac
 
-echo "started topo-server pid=$(cat "$PID_DIR/topo-server.pid") express pid=$(cat "$PID_DIR/express.pid")"
+echo "[done] mode=$MODE"
 ss -lntp | grep -E ':3000|:4000' || true
