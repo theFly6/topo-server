@@ -53,15 +53,27 @@ bash deploy/tj/sync-profiler-workers.sh
 
 ## 本地联调
 
+### MetaX mx17（express 本机 + topo-server 在 mx17）
+
+```powershell
+# 1. mx17 上：cd /home/yaowenxuan/topo-server && ./run.sh start
+# 2. 本机隧道
+ssh -L 4000:192.168.162.17:4000 -p 14735 yaowenxuan@metax-17-jump
+# 3. 本机 express：SERVER_URL_BASE=127.0.0.1:4000  NEO4J_ENABLED=true
+# 4. 本机 vue3：VITE_API_BASE=http://localhost:3000
+```
+
+详见 [deploy/platforms/metax/README.md](https://github.com/theFly6/topo-server/blob/main/deploy/platforms/metax/README.md)
+
+### 天津 tj-24（express 在远端）
+
 ```powershell
 ssh -L 3000:127.0.0.1:3000 -L 4000:177.177.190.145:4000 tj-24
 ```
 
-[cytoscape-vue3](https://github.com/theFly6/cytoscape-vue3) 中设置：
+[cytoscape-vue3](https://github.com/theFly6/cytoscape-vue3)：`VITE_API_BASE=http://localhost:3000`
 
-```
-VITE_API_BASE=http://localhost:3000
-```
+详见 [deploy/tj/README.md](https://github.com/theFly6/topo-server/blob/main/deploy/tj/README.md)
 
 ## 带宽探测参数（可环境变量覆盖）
 

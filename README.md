@@ -30,14 +30,21 @@ npm start   # 或 ts-node ./src/server.ts
 
 | 平台 | 说明 |
 |------|------|
-| MetaX（metax-17） | [deploy/platforms/metax/](deploy/platforms/metax/) |
-| 天津（tj-24） | [deploy/tj/README.md](deploy/tj/README.md) |
+| MetaX（mx17） | [deploy/platforms/metax/README.md](deploy/platforms/metax/README.md) — 远端 `./run.sh`，本机 express 联调 |
+| 天津（tj-24） | [deploy/tj/README.md](deploy/tj/README.md) — 轻量 scp + 同机 express/topo-server |
 
 tj-24 轻量部署（Windows → 远端 npm ci）：
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File deploy/sync-tj24.ps1
 ```
+
+### 本地联调速查
+
+| 平台 | 本机需要 | 隧道 / 配置 |
+|------|----------|-------------|
+| **mx17** | express + vue3 | `ssh -L 4000:192.168.162.17:4000 -p 14735 …` → express `SERVER_URL_BASE=127.0.0.1:4000` |
+| **tj-24** | 仅 vue3 | `ssh -L 3000:127.0.0.1:3000 tj-24` → `VITE_API_BASE=http://localhost:3000` |
 
 ## 主要 API
 

@@ -45,11 +45,16 @@ bash /private/yaowenxuan/topo/deploy/tj/remote-install.sh
 
 ## 本地前端联调
 
+### tj-24（express 在远端，本机只跑前端）
+
 ```
-VITE_API_BASE=http://177.177.190.145:3000
+VITE_API_BASE=http://localhost:3000
+ssh -L 3000:127.0.0.1:3000 tj-24
 ```
 
-（需本机可访问 tj-24 的 3000 端口；或通过 SSH 隧道 `-L 3000:127.0.0.1:3000 tj-24`）
+### 切换回 MetaX mx17
+
+express 需跑在本机，见 [deploy/platforms/metax/README.md](../platforms/metax/README.md)
 
 ## 限制（tj 初版）
 
