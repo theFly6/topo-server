@@ -1,0 +1,181 @@
+{
+    "matrixData": [
+        {
+            "device": "GPU0",
+            "connections": {
+                "GPU0": "X",
+                "GPU1": "NV8",
+                "GPU2": "NV8",
+                "GPU3": "NV8",
+                "GPU4": "NV8",
+                "GPU5": "NV8",
+                "GPU6": "NV8",
+                "GPU7": "NV8",
+                "NIC0": "PXB",
+                "NIC1": "SYS"
+            },
+            "cpu_affinity": "0-31,64-95",
+            "numa_affinity": "0"
+        },
+        {
+            "device": "GPU1",
+            "connections": {
+                "GPU0": "NV8",
+                "GPU1": "X",
+                "GPU2": "NV8",
+                "GPU3": "NV8",
+                "GPU4": "NV8",
+                "GPU5": "NV8",
+                "GPU6": "NV8",
+                "GPU7": "NV8",
+                "NIC0": "PXB",
+                "NIC1": "SYS"
+            },
+            "cpu_affinity": "0-31,64-95",
+            "numa_affinity": "0"
+        },
+        {
+            "device": "GPU2",
+            "connections": {
+                "GPU0": "NV8",
+                "GPU1": "NV8",
+                "GPU2": "X",
+                "GPU3": "NV8",
+                "GPU4": "NV8",
+                "GPU5": "NV8",
+                "GPU6": "NV8",
+                "GPU7": "NV8",
+                "NIC0": "NODE",
+                "NIC1": "SYS"
+            },
+            "cpu_affinity": "0-31,64-95",
+            "numa_affinity": "0"
+        },
+        {
+            "device": "GPU3",
+            "connections": {
+                "GPU0": "NV8",
+                "GPU1": "NV8",
+                "GPU2": "NV8",
+                "GPU3": "X",
+                "GPU4": "NV8",
+                "GPU5": "NV8",
+                "GPU6": "NV8",
+                "GPU7": "NV8",
+                "NIC0": "NODE",
+                "NIC1": "SYS"
+            },
+            "cpu_affinity": "0-31,64-95",
+            "numa_affinity": "0"
+        },
+        {
+            "device": "GPU4",
+            "connections": {
+                "GPU0": "NV8",
+                "GPU1": "NV8",
+                "GPU2": "NV8",
+                "GPU3": "NV8",
+                "GPU4": "X",
+                "GPU5": "NV8",
+                "GPU6": "NV8",
+                "GPU7": "NV8",
+                "NIC0": "SYS",
+                "NIC1": "PXB"
+            },
+            "cpu_affinity": "32-63,96-127",
+            "numa_affinity": "1"
+        },
+        {
+            "device": "GPU5",
+            "connections": {
+                "GPU0": "NV8",
+                "GPU1": "NV8",
+                "GPU2": "NV8",
+                "GPU3": "NV8",
+                "GPU4": "NV8",
+                "GPU5": "X",
+                "GPU6": "NV8",
+                "GPU7": "NV8",
+                "NIC0": "SYS",
+                "NIC1": "PXB"
+            },
+            "cpu_affinity": "32-63,96-127",
+            "numa_affinity": "1"
+        },
+        {
+            "device": "GPU6",
+            "connections": {
+                "GPU0": "NV8",
+                "GPU1": "NV8",
+                "GPU2": "NV8",
+                "GPU3": "NV8",
+                "GPU4": "NV8",
+                "GPU5": "NV8",
+                "GPU6": "X",
+                "GPU7": "NV8",
+                "NIC0": "SYS",
+                "NIC1": "NODE"
+            },
+            "cpu_affinity": "32-63,96-127",
+            "numa_affinity": "1"
+        },
+        {
+            "device": "GPU7",
+            "connections": {
+                "GPU0": "NV8",
+                "GPU1": "NV8",
+                "GPU2": "NV8",
+                "GPU3": "NV8",
+                "GPU4": "NV8",
+                "GPU5": "NV8",
+                "GPU6": "NV8",
+                "GPU7": "X",
+                "NIC0": "SYS",
+                "NIC1": "NODE"
+            },
+            "cpu_affinity": "32-63,96-127",
+            "numa_affinity": "1"
+        },
+        {
+            "device": "NIC0",
+            "connections": {
+                "GPU0": "PXB",
+                "GPU1": "PXB",
+                "GPU2": "NODE",
+                "GPU3": "NODE",
+                "GPU4": "SYS",
+                "GPU5": "SYS",
+                "GPU6": "SYS",
+                "GPU7": "SYS",
+                "NIC0": "X",
+                "NIC1": "SYS"
+            }
+        },
+        {
+            "device": "NIC1",
+            "connections": {
+                "GPU0": "SYS",
+                "GPU1": "SYS",
+                "GPU2": "SYS",
+                "GPU3": "SYS",
+                "GPU4": "PXB",
+                "GPU5": "PXB",
+                "GPU6": "NODE",
+                "GPU7": "NODE",
+                "NIC0": "SYS",
+                "NIC1": "X"
+            }
+        }
+    ],
+    "legendData": {
+        "X": "Self",
+        "SYS": "Connection traversing PCIe as well as the SMP interconnect between NUMA nodes (e.g., QPI/UPI)",
+        "NODE": "Connection traversing PCIe as well as the interconnect between PCIe Host Bridges within a NUMA node",
+        "PHB": "Connection traversing PCIe as well as a PCIe Host Bridge (typically the CPU)",
+        "PXB": "Connection traversing multiple PCIe bridges (without traversing the PCIe Host Bridge)",
+        "PIX": "Connection traversing at most a single PCIe bridge",
+        "NV#": "Connection traversing a bonded set of # NVLinks",
+        "NIC0": "mlx5_0",
+        "NIC1": "mlx5_1"
+    }
+}

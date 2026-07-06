@@ -1,0 +1,505 @@
+{
+    "elements": [
+        {
+            "group": "nodes",
+            "data": {
+                "id": "172.16.0.46",
+                "name": "node1",
+                "depth": 1,
+                "x": "0",
+                "y": "0",
+                "width": "30",
+                "height": "30",
+                "color": "41 186 122",
+                "borderColor": "34 101 151",
+                "textColor": "17 17 17",
+                "shape": "ellipse",
+                "text": "",
+                "textFont": "1|Arial|8|0|WINDOWS|1|-11|0|0|0|0|0|0|0|1|0|0|0|0|Arial"
+            }
+        },
+        {
+            "group": "nodes",
+            "data": {
+                "id": "172.16.0.46-nvlink-bus",
+                "name": "NVLink Fabric",
+                "depth": 2,
+                "x": "0",
+                "y": "0",
+                "width": "30",
+                "height": "30",
+                "color": "30 59 205",
+                "borderColor": "34 101 151",
+                "textColor": "17 17 17",
+                "shape": "ellipse",
+                "text": "",
+                "textFont": "1|Arial|8|0|WINDOWS|1|-11|0|0|0|0|0|0|0|1|0|0|0|0|Arial",
+                "parent": "172.16.0.46"
+            }
+        },
+        {
+            "group": "nodes",
+            "data": {
+                "id": "172.16.0.46-numa0",
+                "name": "NUMA0",
+                "depth": 2,
+                "x": "0",
+                "y": "0",
+                "width": "30",
+                "height": "30",
+                "color": "16 9 242",
+                "borderColor": "34 101 151",
+                "textColor": "17 17 17",
+                "shape": "ellipse",
+                "text": "",
+                "textFont": "1|Arial|8|0|WINDOWS|1|-11|0|0|0|0|0|0|0|1|0|0|0|0|Arial",
+                "parent": "172.16.0.46"
+            }
+        },
+        {
+            "group": "nodes",
+            "data": {
+                "id": "172.16.0.46-numa1",
+                "name": "NUMA1",
+                "depth": 2,
+                "x": "0",
+                "y": "0",
+                "width": "30",
+                "height": "30",
+                "color": "197 99 151",
+                "borderColor": "34 101 151",
+                "textColor": "17 17 17",
+                "shape": "ellipse",
+                "text": "",
+                "textFont": "1|Arial|8|0|WINDOWS|1|-11|0|0|0|0|0|0|0|1|0|0|0|0|Arial",
+                "parent": "172.16.0.46"
+            }
+        },
+        {
+            "group": "nodes",
+            "data": {
+                "id": "172.16.0.46-pcisw0",
+                "name": "PXB0",
+                "depth": 3,
+                "x": "0",
+                "y": "0",
+                "width": "30",
+                "height": "30",
+                "color": "243 29 193",
+                "borderColor": "34 101 151",
+                "textColor": "17 17 17",
+                "shape": "ellipse",
+                "text": "",
+                "textFont": "1|Arial|8|0|WINDOWS|1|-11|0|0|0|0|0|0|0|1|0|0|0|0|Arial",
+                "parent": "172.16.0.46-numa0"
+            }
+        },
+        {
+            "group": "nodes",
+            "data": {
+                "id": "172.16.0.46-pcisw1",
+                "name": "PXB1",
+                "depth": 3,
+                "x": "0",
+                "y": "0",
+                "width": "30",
+                "height": "30",
+                "color": "57 86 4",
+                "borderColor": "34 101 151",
+                "textColor": "17 17 17",
+                "shape": "ellipse",
+                "text": "",
+                "textFont": "1|Arial|8|0|WINDOWS|1|-11|0|0|0|0|0|0|0|1|0|0|0|0|Arial",
+                "parent": "172.16.0.46-numa1"
+            }
+        },
+        {
+            "group": "nodes",
+            "data": {
+                "id": "172.16.0.46-cpu0",
+                "name": "CPU0",
+                "depth": 3,
+                "x": "0",
+                "y": "0",
+                "width": "30",
+                "height": "30",
+                "color": "36 55 164",
+                "borderColor": "34 101 151",
+                "textColor": "17 17 17",
+                "shape": "rectangle",
+                "text": "",
+                "textFont": "1|Arial|8|0|WINDOWS|1|-11|0|0|0|0|0|0|0|1|0|0|0|0|Arial",
+                "parent": "172.16.0.46-numa0"
+            }
+        },
+        {
+            "group": "nodes",
+            "data": {
+                "id": "172.16.0.46-cpu1",
+                "name": "CPU1",
+                "depth": 3,
+                "x": "0",
+                "y": "0",
+                "width": "30",
+                "height": "30",
+                "color": "11 218 238",
+                "borderColor": "34 101 151",
+                "textColor": "17 17 17",
+                "shape": "rectangle",
+                "text": "",
+                "textFont": "1|Arial|8|0|WINDOWS|1|-11|0|0|0|0|0|0|0|1|0|0|0|0|Arial",
+                "parent": "172.16.0.46-numa1"
+            }
+        },
+        {
+            "group": "nodes",
+            "data": {
+                "id": "172.16.0.46-gpu0",
+                "name": "GPU0",
+                "depth": 4,
+                "x": "0",
+                "y": "0",
+                "width": "30",
+                "height": "30",
+                "color": "112 60 202",
+                "borderColor": "34 101 151",
+                "textColor": "17 17 17",
+                "shape": "star",
+                "text": "",
+                "textFont": "1|Arial|8|0|WINDOWS|1|-11|0|0|0|0|0|0|0|1|0|0|0|0|Arial",
+                "parent": "172.16.0.46-numa0"
+            }
+        },
+        {
+            "group": "nodes",
+            "data": {
+                "id": "172.16.0.46-gpu1",
+                "name": "GPU1",
+                "depth": 4,
+                "x": "0",
+                "y": "0",
+                "width": "30",
+                "height": "30",
+                "color": "147 101 8",
+                "borderColor": "34 101 151",
+                "textColor": "17 17 17",
+                "shape": "star",
+                "text": "",
+                "textFont": "1|Arial|8|0|WINDOWS|1|-11|0|0|0|0|0|0|0|1|0|0|0|0|Arial",
+                "parent": "172.16.0.46-numa0"
+            }
+        },
+        {
+            "group": "nodes",
+            "data": {
+                "id": "172.16.0.46-gpu2",
+                "name": "GPU2",
+                "depth": 4,
+                "x": "0",
+                "y": "0",
+                "width": "30",
+                "height": "30",
+                "color": "118 193 204",
+                "borderColor": "34 101 151",
+                "textColor": "17 17 17",
+                "shape": "star",
+                "text": "",
+                "textFont": "1|Arial|8|0|WINDOWS|1|-11|0|0|0|0|0|0|0|1|0|0|0|0|Arial",
+                "parent": "172.16.0.46-numa0"
+            }
+        },
+        {
+            "group": "nodes",
+            "data": {
+                "id": "172.16.0.46-gpu3",
+                "name": "GPU3",
+                "depth": 4,
+                "x": "0",
+                "y": "0",
+                "width": "30",
+                "height": "30",
+                "color": "124 145 50",
+                "borderColor": "34 101 151",
+                "textColor": "17 17 17",
+                "shape": "star",
+                "text": "",
+                "textFont": "1|Arial|8|0|WINDOWS|1|-11|0|0|0|0|0|0|0|1|0|0|0|0|Arial",
+                "parent": "172.16.0.46-numa0"
+            }
+        },
+        {
+            "group": "nodes",
+            "data": {
+                "id": "172.16.0.46-gpu4",
+                "name": "GPU4",
+                "depth": 4,
+                "x": "0",
+                "y": "0",
+                "width": "30",
+                "height": "30",
+                "color": "45 199 246",
+                "borderColor": "34 101 151",
+                "textColor": "17 17 17",
+                "shape": "star",
+                "text": "",
+                "textFont": "1|Arial|8|0|WINDOWS|1|-11|0|0|0|0|0|0|0|1|0|0|0|0|Arial",
+                "parent": "172.16.0.46-numa1"
+            }
+        },
+        {
+            "group": "nodes",
+            "data": {
+                "id": "172.16.0.46-gpu5",
+                "name": "GPU5",
+                "depth": 4,
+                "x": "0",
+                "y": "0",
+                "width": "30",
+                "height": "30",
+                "color": "133 168 248",
+                "borderColor": "34 101 151",
+                "textColor": "17 17 17",
+                "shape": "star",
+                "text": "",
+                "textFont": "1|Arial|8|0|WINDOWS|1|-11|0|0|0|0|0|0|0|1|0|0|0|0|Arial",
+                "parent": "172.16.0.46-numa1"
+            }
+        },
+        {
+            "group": "nodes",
+            "data": {
+                "id": "172.16.0.46-gpu6",
+                "name": "GPU6",
+                "depth": 4,
+                "x": "0",
+                "y": "0",
+                "width": "30",
+                "height": "30",
+                "color": "150 99 244",
+                "borderColor": "34 101 151",
+                "textColor": "17 17 17",
+                "shape": "star",
+                "text": "",
+                "textFont": "1|Arial|8|0|WINDOWS|1|-11|0|0|0|0|0|0|0|1|0|0|0|0|Arial",
+                "parent": "172.16.0.46-numa1"
+            }
+        },
+        {
+            "group": "nodes",
+            "data": {
+                "id": "172.16.0.46-gpu7",
+                "name": "GPU7",
+                "depth": 4,
+                "x": "0",
+                "y": "0",
+                "width": "30",
+                "height": "30",
+                "color": "108 242 71",
+                "borderColor": "34 101 151",
+                "textColor": "17 17 17",
+                "shape": "star",
+                "text": "",
+                "textFont": "1|Arial|8|0|WINDOWS|1|-11|0|0|0|0|0|0|0|1|0|0|0|0|Arial",
+                "parent": "172.16.0.46-numa1"
+            }
+        },
+        {
+            "group": "nodes",
+            "data": {
+                "id": "172.16.0.46-nic0",
+                "name": "NIC0",
+                "depth": 4,
+                "x": "0",
+                "y": "0",
+                "width": "30",
+                "height": "30",
+                "color": "81 149 21",
+                "borderColor": "34 101 151",
+                "textColor": "17 17 17",
+                "shape": "triangle",
+                "text": "",
+                "textFont": "1|Arial|8|0|WINDOWS|1|-11|0|0|0|0|0|0|0|1|0|0|0|0|Arial",
+                "parent": "172.16.0.46-numa0"
+            }
+        },
+        {
+            "group": "nodes",
+            "data": {
+                "id": "172.16.0.46-nic1",
+                "name": "NIC1",
+                "depth": 4,
+                "x": "0",
+                "y": "0",
+                "width": "30",
+                "height": "30",
+                "color": "240 55 192",
+                "borderColor": "34 101 151",
+                "textColor": "17 17 17",
+                "shape": "triangle",
+                "text": "",
+                "textFont": "1|Arial|8|0|WINDOWS|1|-11|0|0|0|0|0|0|0|1|0|0|0|0|Arial",
+                "parent": "172.16.0.46-numa1"
+            }
+        },
+        {
+            "group": "edges",
+            "data": {
+                "id": "e0",
+                "source": "172.16.0.46-gpu0",
+                "target": "172.16.0.46-nvlink-bus"
+            }
+        },
+        {
+            "group": "edges",
+            "data": {
+                "id": "e1",
+                "source": "172.16.0.46-gpu0",
+                "target": "172.16.0.46-pcisw0"
+            }
+        },
+        {
+            "group": "edges",
+            "data": {
+                "id": "e2",
+                "source": "172.16.0.46-gpu1",
+                "target": "172.16.0.46-nvlink-bus"
+            }
+        },
+        {
+            "group": "edges",
+            "data": {
+                "id": "e3",
+                "source": "172.16.0.46-gpu1",
+                "target": "172.16.0.46-pcisw0"
+            }
+        },
+        {
+            "group": "edges",
+            "data": {
+                "id": "e4",
+                "source": "172.16.0.46-gpu2",
+                "target": "172.16.0.46-nvlink-bus"
+            }
+        },
+        {
+            "group": "edges",
+            "data": {
+                "id": "e5",
+                "source": "172.16.0.46-gpu2",
+                "target": "172.16.0.46-pcisw0"
+            }
+        },
+        {
+            "group": "edges",
+            "data": {
+                "id": "e6",
+                "source": "172.16.0.46-gpu3",
+                "target": "172.16.0.46-nvlink-bus"
+            }
+        },
+        {
+            "group": "edges",
+            "data": {
+                "id": "e7",
+                "source": "172.16.0.46-gpu3",
+                "target": "172.16.0.46-pcisw0"
+            }
+        },
+        {
+            "group": "edges",
+            "data": {
+                "id": "e8",
+                "source": "172.16.0.46-gpu4",
+                "target": "172.16.0.46-pcisw1"
+            }
+        },
+        {
+            "group": "edges",
+            "data": {
+                "id": "e9",
+                "source": "172.16.0.46-gpu4",
+                "target": "172.16.0.46-nvlink-bus"
+            }
+        },
+        {
+            "group": "edges",
+            "data": {
+                "id": "e10",
+                "source": "172.16.0.46-gpu5",
+                "target": "172.16.0.46-pcisw1"
+            }
+        },
+        {
+            "group": "edges",
+            "data": {
+                "id": "e11",
+                "source": "172.16.0.46-gpu5",
+                "target": "172.16.0.46-nvlink-bus"
+            }
+        },
+        {
+            "group": "edges",
+            "data": {
+                "id": "e12",
+                "source": "172.16.0.46-gpu6",
+                "target": "172.16.0.46-pcisw1"
+            }
+        },
+        {
+            "group": "edges",
+            "data": {
+                "id": "e13",
+                "source": "172.16.0.46-gpu6",
+                "target": "172.16.0.46-nvlink-bus"
+            }
+        },
+        {
+            "group": "edges",
+            "data": {
+                "id": "e14",
+                "source": "172.16.0.46-gpu7",
+                "target": "172.16.0.46-pcisw1"
+            }
+        },
+        {
+            "group": "edges",
+            "data": {
+                "id": "e15",
+                "source": "172.16.0.46-gpu7",
+                "target": "172.16.0.46-nvlink-bus"
+            }
+        },
+        {
+            "group": "edges",
+            "data": {
+                "id": "e16",
+                "source": "172.16.0.46-nic0",
+                "target": "172.16.0.46-pcisw0"
+            }
+        },
+        {
+            "group": "edges",
+            "data": {
+                "id": "e17",
+                "source": "172.16.0.46-nic1",
+                "target": "172.16.0.46-pcisw1"
+            }
+        },
+        {
+            "group": "edges",
+            "data": {
+                "id": "e18",
+                "source": "172.16.0.46-cpu0",
+                "target": "172.16.0.46-pcisw0"
+            }
+        },
+        {
+            "group": "edges",
+            "data": {
+                "id": "e19",
+                "source": "172.16.0.46-cpu1",
+                "target": "172.16.0.46-pcisw1"
+            }
+        }
+    ]
+}

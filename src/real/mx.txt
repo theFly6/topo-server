@@ -1,0 +1,29 @@
+[yaowenxuan@localhost ~]$ ht-smi topo -m
+ht-smi  version: 2.2.3
+
+=================== Mars System Management Interface Log ===================
+Timestamp                                         : Thu Mar 12 09:45:57 2026
+
+Attached GPUs                                     : 8
+Device link type matrix
+        GPU0    GPU1    GPU2    GPU3    GPU4    GPU5    GPU6    GPU7    Node Affinity  CPU Affinity
+GPU0    X       HT      HT      HT      HT      HT      HT      HT      2              32-47
+GPU1    HT      X       HT      HT      HT      HT      HT      HT      2              32-47
+GPU2    HT      HT      X       HT      HT      HT      HT      HT      3              48-63
+GPU3    HT      HT      HT      X       HT      HT      HT      HT      3              48-63
+GPU4    HT      HT      HT      HT      X       HT      HT      HT      6              96-111
+GPU5    HT      HT      HT      HT      HT      X       HT      HT      6              96-111
+GPU6    HT      HT      HT      HT      HT      HT      X       HT      7              112-127
+GPU7    HT      HT      HT      HT      HT      HT      HT      X       7              112-127
+
+Legend:
+  X    = Self
+  SYS  = Connection traversing PCIe as well as the SMP interconnect between NUMA nodes (e.g., QPI/UPI)
+  NODE = Connection traversing PCIe as well as the interconnect between PCIe Host Bridges within a NUMA node
+  PHB  = Connection traversing PCIe as well as a PCIe Host Bridge (typically the CPU)
+  PXB  = Connection traversing multiple PCIe bridges (without traversing the PCIe Host Bridge)
+  PIX  = Connection traversing at most a single PCIe bridge
+  HT   = Connection traversing MarsLink
+  NA   = Connection type is unknown
+
+

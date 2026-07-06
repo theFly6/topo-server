@@ -1,0 +1,242 @@
+{
+  "measurement_info": {
+    "timestamp_utc": "2026-03-10 07:32:12 UTC",
+    "platform": "NVIDIA",
+    "buffer_mib": 256,
+    "fallback_buffer_mib": 128,
+    "bandwidth_ramp_sizes_mib": [],
+    "warmup": 5,
+    "repeat": 5,
+    "bidirectional_enabled": true,
+    "include_self_gpu_pairs": false
+  },
+  "cpu_info": {
+    "architecture": "x86_64",
+    "base_freq_mhz": "1500.000",
+    "max_freq_mhz": 2500.0,
+    "min_freq_mhz": 1500.0,
+    "total_cores": 96,
+    "model": "AMD EPYC 9224 24-Core Processor",
+    "family": "25",
+    "model_number": "17",
+    "threads_per_core": 2,
+    "cores_per_socket": 24,
+    "sockets": 2,
+    "stepping": "1",
+    "bogomips": 4992.41,
+    "l1d_cache": "1.5 MiB (48 instances)",
+    "l1i_cache": "1.5 MiB (48 instances)",
+    "l2_cache": "48 MiB (48 instances)",
+    "l3_cache": "128 MiB (8 instances)",
+    "numa_nodes": 2
+  },
+  "gpu_metadata": [
+    {
+      "index": 0,
+      "name": "NVIDIA GeForce RTX 4090",
+      "pci_bus_id": "00000000:21:00.0",
+      "pci_domain": 0,
+      "pci_bus": 33,
+      "pci_device": 0,
+      "max_pcie_gen": 4,
+      "max_pcie_width": 16,
+      "current_pcie_gen": 4,
+      "current_pcie_width": 16,
+      "total_memory_gb": 23.99,
+      "compute_capability": "8.9",
+      "source": "nvidia-smi"
+    },
+    {
+      "index": 1,
+      "name": "NVIDIA GeForce RTX 4090",
+      "pci_bus_id": "00000000:A1:00.0",
+      "pci_domain": 0,
+      "pci_bus": 161,
+      "pci_device": 0,
+      "max_pcie_gen": 4,
+      "max_pcie_width": 16,
+      "current_pcie_gen": 1,
+      "current_pcie_width": 16,
+      "total_memory_gb": 23.99,
+      "compute_capability": "8.9",
+      "source": "nvidia-smi"
+    }
+  ],
+  "gpu_labels": [
+    "GPU0",
+    "GPU1"
+  ],
+  "p2p_capability_matrix": [
+    [
+      false,
+      false
+    ],
+    [
+      false,
+      false
+    ]
+  ],
+  "topology_native": {
+    "raw": "         GPU0     GPU1     CPU Affinity     NUMA Affinity     GPU NUMA ID\nGPU0     X        NODE     0-23,48-71       0-1               N/A        \nGPU1     NODE     X        24-47,72-95      1                 N/A        "
+  },
+  "gpu_to_gpu": {
+    "bandwidth_GBps": {
+      "p2p_disabled": {
+        "unidirectional_read": [
+          [
+            "NaN",
+            20.358825542795874
+          ],
+          [
+            20.961135350480124,
+            "NaN"
+          ]
+        ],
+        "unidirectional_write": [
+          [
+            "NaN",
+            20.619908657731287
+          ],
+          [
+            20.48599983720232,
+            "NaN"
+          ]
+        ],
+        "bidirectional": [
+          [
+            "NaN",
+            27.57146051190811
+          ],
+          [
+            26.538942368437517,
+            "NaN"
+          ]
+        ]
+      },
+      "p2p_enabled": {
+        "unidirectional_read": [
+          [
+            "NaN",
+            20.381601449750875
+          ],
+          [
+            20.937204424441248,
+            "NaN"
+          ]
+        ],
+        "unidirectional_write": [
+          [
+            "NaN",
+            20.6150660474178
+          ],
+          [
+            20.519866252653983,
+            "NaN"
+          ]
+        ],
+        "bidirectional": [
+          [
+            "NaN",
+            27.628233731264185
+          ],
+          [
+            26.562124589430244,
+            "NaN"
+          ]
+        ]
+      }
+    },
+    "latency_us": {
+      "p2p_disabled": {
+        "unidirectional_read": [
+          [
+            "NaN",
+            6.901760101318359
+          ],
+          [
+            6.869440078735352,
+            "NaN"
+          ]
+        ],
+        "unidirectional_write": [
+          [
+            "NaN",
+            7.356799840927124
+          ],
+          [
+            6.968640089035034,
+            "NaN"
+          ]
+        ]
+      },
+      "p2p_enabled": {
+        "unidirectional_read": [
+          [
+            "NaN",
+            6.7686402797698975
+          ],
+          [
+            6.7689597606658936,
+            "NaN"
+          ]
+        ],
+        "unidirectional_write": [
+          [
+            "NaN",
+            7.135999798774719
+          ],
+          [
+            6.849279999732971,
+            "NaN"
+          ]
+        ]
+      }
+    }
+  },
+  "gpu_to_host": {
+    "bandwidth_GBps": {
+      "pageable": {
+        "H_to_D": [
+          17.231179558587744,
+          17.289922794753927
+        ],
+        "D_to_H": [
+          15.279816299005414,
+          14.66817681563228
+        ]
+      },
+      "pinned": {
+        "H_to_D": [
+          24.949557245863698,
+          24.94874611765213
+        ],
+        "D_to_H": [
+          24.539105454948487,
+          25.217214504392615
+        ]
+      }
+    },
+    "latency_us": {
+      "pageable": {
+        "H_to_D": [
+          2.969600073993206,
+          2.3552000522613525
+        ],
+        "D_to_H": [
+          6.3040003180503845,
+          5.663999915122986
+        ]
+      },
+      "pinned": {
+        "H_to_D": [
+          2.8672000393271446,
+          2.5599999353289604
+        ],
+        "D_to_H": [
+          2.595200017094612,
+          2.3520000278949738
+        ]
+      }
+    }
+  }
+}
