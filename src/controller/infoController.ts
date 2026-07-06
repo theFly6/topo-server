@@ -13,6 +13,7 @@ import fs from 'fs';
 import path from 'path';
 import { get } from 'http';
 import { getLocalIPv4 } from '../server';
+import { SSH_PORT, WORKERS_CONF } from '../config/platform';
 
 export const handleIp2TopologyData = (req: Request, res: Response) => {
     const { ip, port } = req.query;
@@ -68,7 +69,7 @@ export const handleIp2TopologyData = (req: Request, res: Response) => {
 export const handleIp2TopologyDetailData = async (req: any, res: any) => {
     const { ip } = req.query; 
     const safeIp = ip.replace(/\./g, '-');
-    const sshPort = "14735";
+    const sshPort = process.env.SSH_PORT || SSH_PORT;
     const remoteDir = "~/Topo-profiler";
     const binaryName = "topo-profiler";
     const targetFileName = `res_${safeIp}.json`; 
@@ -142,7 +143,7 @@ export const handleIp2TopologyDetailData = async (req: any, res: any) => {
 export const getRealNodes = (): any[] => {
     // 这里可以添加实际获取节点信息的逻辑
     // return nodes;
-    const content = fs.readFileSync('./workers.conf', 'utf-8');
+    const content = fs.readFileSync(WORKERS_CONF, 'utf-8');
     //   先过滤掉注释行和空行，再解析每行的hostname和ip以及端口
     const parsedList  = content.split('\n')
         // 第一步：处理行内注释（移除第一个#及其后的所有内容）
@@ -178,7 +179,7 @@ export const saveNodesToFile = (newNodes: any[]) => {
         .join('\n');
 
     // 2. 写入文件
-    fs.writeFileSync('./workers.conf', header + content, 'utf-8');
+    fs.writeFileSync(WORKERS_CONF, header + content, 'utf-8');
 };
 
 

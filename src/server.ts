@@ -8,7 +8,9 @@ dotenv.config()
 export function getLocalIPv4() {
   const nets = os.networkInterfaces();
   // 定义网卡优先级列表（按优先级从高到低：ens22f1 > ens22f0）
-  const priorityNics = ['ens22f1', 'ens22f0'];
+  const priorityNics = process.env.NIC_PRIORITY
+    ? process.env.NIC_PRIORITY.split(',').map((s) => s.trim())
+    : ['ens22f1', 'ens22f0', 'eth0', 'net1'];
   
   // 第一步：优先遍历高优先级网卡，获取其IPv4地址
   for (const nicName of priorityNics) {

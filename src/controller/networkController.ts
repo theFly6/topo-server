@@ -3,6 +3,7 @@ import dotenv from 'dotenv'
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { getLocalIPv4 } from '../server';
+import { SSH_PORT } from '../config/platform';
 
 const execPromise = promisify(exec);
 
@@ -23,7 +24,7 @@ async function runCommand(command: string) {
 }
 
 // 检测是否可免密 SSH 登录
-async function canSshLogin(ip: string, port=14735): Promise<boolean> {
+async function canSshLogin(ip: string, port = SSH_PORT): Promise<boolean> {
   try {
     const cmd = `ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o BatchMode=yes ${ip} -p ${port} exit`;
     await execPromise(cmd);
@@ -40,7 +41,7 @@ export async function getNodes(req: express.Request, res: express.Response) {
     const data = { ...req.query, ...req.body };
     const startTime = Date.now();
     let subnet = data.subnet as string || "192.168.162.0/24";
-    let port = data.port as string || "14735";
+    let port = data.port as string || SSH_PORT;
     if (!subnet.includes("/")) subnet += "/24"; // 自动补子网掩码
     const cmd = `nmap -p ${port} --open -oG - ${subnet} | grep "Up" | awk '{print $2}'`;
     try {
@@ -95,19 +96,19 @@ export async function getLatency(req: express.Request, res: express.Response) {
         return res.status(400).json({ error: "No valid targets" });
     }
 
-    // 未传 source → 使用本机IP
+    const probePort = (data.port as string) || SSH_PORT;
+
     if (!source) {
         source = getLocalIPv4();
     }
 
-    // 测量单个IP的函数
     const measureSingle = async (target: string) => {
         try {
             let cmd: string;
             if (source) {
-                cmd = `ssh -n -T -q -p 14735 ${source} "curl --http0.9 -w '%{time_connect}' -o /dev/null -s --connect-timeout 2 ${target}:14735 2>/dev/null || true"`;
+                cmd = `ssh -n -T -q -p ${SSH_PORT} ${source} "curl --http0.9 -w '%{time_connect}' -o /dev/null -s --connect-timeout 2 ${target}:${probePort} 2>/dev/null || true"`;
             } else {
-                cmd = `curl --http0.9 -w "%{time_connect}" -o /dev/null -s --connect-timeout 2 ${target}:14735 2>/dev/null || true"`;
+                cmd = `curl --http0.9 -w "%{time_connect}" -o /dev/null -s --connect-timeout 2 ${target}:${probePort} 2>/dev/null || true"`;
             }
 
             const { stdout } = await execPromise(cmd);
@@ -129,7 +130,6 @@ export async function getLatency(req: express.Request, res: express.Response) {
     };
 
     try {
-        // ✅ 并行测量所有目标（超快）
         const results = await Promise.all(targetArray.map((t: any) => measureSingle(t)));
 
         return res.json({
@@ -150,7 +150,7 @@ export async function getLatency(req: express.Request, res: express.Response) {
 
 
 // ==================== iperf3 带宽测量 ====================
-const IPERF_SSH_PORT = 14735;
+const IPERF_SSH_PORT = SSH_PORT;
 const iperfServerCache = new Set<string>();
 
 function sleep(ms: number) {
